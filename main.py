@@ -1,6 +1,29 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI()
+from app.routes import auth
+
+app = FastAPI(
+    title="MeloMind API",
+    description="API for MeloMind",
+    version="0.1.0",
+)
+
+app.include_router(auth.router)
+origins = [
+    "localhost:8000",
+    "melomind.vercel.app",
+    "localhost:8000/*",
+    "melomind.vercel.app/*"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/")
