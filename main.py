@@ -1,10 +1,11 @@
+import numpy as np
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from prisma import Prisma
 
-from app.models.kaggle_dataset import load_songs_from_csv, DatasetSong
-from app.routes import auth, spotify
+from app.routes import load_and_prepare_data
+from app.routes.get_network import get_network
 from app.services.database import Database
+from prisma import Prisma
 
 app = FastAPI(
     title="MeloMind API",
@@ -12,8 +13,7 @@ app = FastAPI(
     version="0.1.0",
 )
 
-app.include_router(auth.router)
-app.include_router(spotify.router)
+app.include_router(load_and_prepare_data.router, tags=["Load Data"])
 
 origins = [
     "*"
@@ -26,8 +26,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-songs: list[DatasetSong] = load_songs_from_csv('sorted_songs_no_lyrics.csv', 100)
-
 database: Database = Database()
 
 
@@ -41,15 +39,19 @@ async def get_prisma_client() -> Prisma:
         await prisma.disconnect()
 
 
-@app.get("/load_and_get_songs")
-async def load_and_get_songs():
-    global songs
-    return songs
-
-
 @app.get("/")
 async def root():
-    return {"message": "Hello World"}
+    data = load_and_prepare_data.load_and_prepare_data()
+
+    network_response = get_network(
+        np.array(data['x_train']),
+        np.array(data['y_train']),
+        np.array(data['x_val']),
+        np.array(data['y_val']),
+        # np.array(data['x_test'])
+    )
+    print(network_response)
+    return {"message": "Model trained and evaluated"}
 
 
 @app.get("/hello/{name}")
